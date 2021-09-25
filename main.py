@@ -6,7 +6,7 @@ import datetime
 import pandas as pd
 
 
-def f(row):
+def count_hashtags(row):
     one_tweet = row['tweet']
     return one_tweet.count("#")
 
@@ -22,11 +22,11 @@ def main():
     # Add new column on dataframe to check if has or not a link
     df['has_link'] = df['tweet'].str.contains("https://t.co")
 
-    df["number_of_hashtags"] = df.apply(f, axis=1)
+    df["number_of_hashtags"] = df.apply(count_hashtags, axis=1)
     logging.info(df)
     # Remove tweets if they have the same id
-    now_duplicates = df.drop_duplicates(subset=['tweet_id'])
-    logging.info(now_duplicates)
+    no_duplicates = df.drop_duplicates(subset=['tweet_id'])
+    logging.info(no_duplicates)
 
 
 if __name__ == '__main__':
