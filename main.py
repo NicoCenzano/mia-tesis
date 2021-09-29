@@ -125,6 +125,8 @@ def main():
         df = pd.read_csv('tweets/'+tweet_csv_file['file_name']+'.csv')
         # Add new column on dataframe to check if has or not a link
         df['has_link'] = df['tweet'].str.contains("https://t.co")
+        # Add new column on dataframe that specify hashtag used
+        df['hashtag_used'] = tweet_csv_file['hashtag']
 
         df["number_of_hashtags"] = df.apply(count_hashtags, axis=1)
         logging.debug(df)
@@ -145,15 +147,16 @@ def main():
     # Remove tweets if they have the same id
     final_no_duplicates = df_all_tweets.drop_duplicates(subset=['tweet_id'])
     logging.info(final_no_duplicates)
-    test_1 = final_no_duplicates.head(100)
-    logging.info(test_1)
-    # test_1.to_csv('cleanText.csv')
+
     unique_users = final_no_duplicates.drop_duplicates(subset=['user'])
     index = unique_users.index
     number_of_rows = len(index)
     logging.info('Número de perfiles - {}'.format(number_of_rows))
 
     df_all_en_tweets = final_no_duplicates.loc[final_no_duplicates['lang'] == "en"]
+
+    # Save all EN tweets on csv
+    df_all_en_tweets.to_csv('cleanText-en.csv')
     index = df_all_en_tweets.index
     number_of_rows = len(index)
     logging.info('Número de tweets en inglés - {}'.format(number_of_rows))
