@@ -3,12 +3,25 @@ import os
 import logging
 import math
 import datetime
+from typing import Literal
+from ast import literal_eval
 import pandas as pd
 
 
 def count_hashtags(row):
     one_tweet = row['tweet']
     return one_tweet.count("#")
+
+
+def count_atSign(row):
+    one_tweet = row['tweet']
+    return one_tweet.count("@")
+
+
+def clean_sp(T):
+    T = T.split()
+    T_new = [x for x in T if not x.startswith("@") if not x.startswith("#")]
+    return ' '.join(T_new)
 
 
 def main():
@@ -98,6 +111,7 @@ def main():
         'file_id': [],
         'tweet': [],
         'tweet_id': [],
+        'tweet_link': [],
         'user': [],
         'followers_count': [],
         'friends_count': [],
@@ -116,13 +130,20 @@ def main():
         'has_link': [],
         'number_of_hashtags': [],
         'hashtag_used': []
+
     }
     df_all_tweets = pd.DataFrame(tweet_metadata)
-
+    logging.info(df_all_tweets.dtypes)
+    # Solves problem that stores tweet id as float
+    df_all_tweets['tweet_id'] = df_all_tweets['tweet_id'].astype('int')
+    df_all_tweets['in_reply_to_status_id_str'] = df_all_tweets['in_reply_to_status_id_str'].astype(
+        'int')
+    logging.info(df_all_tweets.dtypes)
     # General for to iterate all CSVs files
     for tweet_csv_file in tweets_csv_metadata:
         # Open CSV into dataframe
-        df = pd.read_csv('tweets/'+tweet_csv_file['file_name']+'.csv')
+        df = pd.read_csv('tweets/'+tweet_csv_file['file_name']+'.csv', converters={
+                         "tweet": lambda x: literal_eval(x).decode("utf-8")})
         # Add new column on dataframe to check if has or not a link
         df['has_link'] = df['tweet'].str.contains("https://t.co")
         # Add new column on dataframe that specify hashtag used
@@ -131,10 +152,27 @@ def main():
         df["number_of_hashtags"] = df.apply(count_hashtags, axis=1)
         logging.debug(df)
 
-        ###
         df["clean_text"] = df['tweet'].str.replace(
-            r"(b')|https\S+|[^\w+\s*',*]|_", "")
+            r"(b')|https\S+|[^\w+\s*',@*]|_", "")
         logging.debug(df)
+
+        df["number_of_atSign"] = df.apply(count_atSign, axis=1)
+        logging.debug(df)
+
+        df["atSign_used"] = df['tweet'].str.contains('@', regex=False)
+        logging.debug(df)
+
+        df["capitalization_word"] = df['tweet'].str.contains(
+            r"\b[A-Z]+(?:\s+[A-Z]+)*\b", regex=True)
+        logging.debug(df)
+
+        df["clean_text2"] = df['tweet'].str.replace(
+            r"(b')|https\S+|[^\w+\s*',@#*]", "").apply(clean_sp)
+        logging.debug(df)
+
+        df["capitalization_test"] = df['clean_text2'].str.isupper()
+        logging.debug(df)
+        df["in_reply_to_status_id_str"].fillna(0, inplace=True)
         # Remove tweets if they have the same id
         no_duplicates = df.drop_duplicates(subset=['tweet_id'])
         # Remove tweets if they have the same text
@@ -144,10 +182,12 @@ def main():
         df_all_tweets = pd.concat(
             [df_all_tweets, no_duplicates], axis=0, ignore_index=True)
     logging.debug(df_all_tweets)
+    # Add link to tweet
+    df_all_tweets['tweet_link'] = df_all_tweets.agg(
+        'https://twitter.com/anyuser/status/{0[tweet_id]}'.format, axis=1)
     # Remove tweets if they have the same id
     final_no_duplicates = df_all_tweets.drop_duplicates(subset=['tweet_id'])
     logging.info(final_no_duplicates)
-
     unique_users = final_no_duplicates.drop_duplicates(subset=['user'])
     index = unique_users.index
     number_of_rows = len(index)
@@ -160,6 +200,7 @@ def main():
     index = df_all_en_tweets.index
     number_of_rows = len(index)
     logging.info('Número de tweets en inglés - {}'.format(number_of_rows))
+    logging.info(df_all_en_tweets.dtypes)
 
     df_all_es_tweets = final_no_duplicates.loc[final_no_duplicates['lang'] == "es"]
     index = df_all_es_tweets.index
