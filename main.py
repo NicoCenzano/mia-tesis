@@ -20,7 +20,8 @@ def count_atSign(row):
 
 def clean_sp(T):
     T = T.split()
-    T_new = [x for x in T if not x.startswith("@") if not x.startswith("#")]
+    T_new = [x for x in T if not x.startswith(
+        "@") if not x.startswith("#") if not x.startswith("RT")]
     return ' '.join(T_new)
 
 
@@ -162,15 +163,15 @@ def main():
         df["atSign_used"] = df['tweet'].str.contains('@', regex=False)
         logging.debug(df)
 
-        df["capitalization_word"] = df['tweet'].str.contains(
-            r"\b[A-Z]+(?:\s+[A-Z]+)*\b", regex=True)
-        logging.debug(df)
-
         df["clean_text2"] = df['tweet'].str.replace(
             r"(b')|https\S+|[^\w+\s*',@#*]", "").apply(clean_sp)
         logging.debug(df)
 
-        df["capitalization_test"] = df['clean_text2'].str.isupper()
+        df["at_least_one_word_is_uppercase"] = df['clean_text2'].str.contains(
+            r"\b[A-Z]+(?:\s+[A-Z]+)*\b", regex=True)
+        logging.debug(df)
+
+        df["all_tweet_uppercase"] = df['clean_text2'].str.isupper()
         logging.debug(df)
         df["in_reply_to_status_id_str"].fillna(0, inplace=True)
         # Remove tweets if they have the same id
@@ -191,7 +192,7 @@ def main():
     unique_users = final_no_duplicates.drop_duplicates(subset=['user'])
     index = unique_users.index
     number_of_rows = len(index)
-    logging.info('Número de perfiles - {}'.format(number_of_rows))
+    logging.info('Numero de perfiles - {}'.format(number_of_rows))
 
     df_all_en_tweets = final_no_duplicates.loc[final_no_duplicates['lang'] == "en"]
 
@@ -199,13 +200,18 @@ def main():
     df_all_en_tweets.to_csv('cleanText-en.csv')
     index = df_all_en_tweets.index
     number_of_rows = len(index)
-    logging.info('Número de tweets en inglés - {}'.format(number_of_rows))
+    logging.info('Numero de tweets en ingles - {}'.format(number_of_rows))
     logging.info(df_all_en_tweets.dtypes)
 
     df_all_es_tweets = final_no_duplicates.loc[final_no_duplicates['lang'] == "es"]
     index = df_all_es_tweets.index
     number_of_rows = len(index)
-    logging.info('Número de tweets en español - {}'.format(number_of_rows))
+    logging.info('Numero de tweets en espanol - {}'.format(number_of_rows))
+    uniqueValues = df_all_en_tweets['source'].unique()
+    countUniqueValues = df_all_en_tweets['source'].nunique()
+    print('Unique elements in column "source" ')
+    print(uniqueValues)
+    print(countUniqueValues)
 
 
 if __name__ == '__main__':
